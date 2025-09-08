@@ -1,0 +1,30 @@
+services:
+  nginx:
+    image: nginx:latest
+    # 开机启动
+    restart: always
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - /Users/zouyl/env/volumes/nginx/nginx.conf:/etc/nginx/nginx.conf
+      - /Users/zouyl/env/volumes/nginx/conf.d:/etc/nginx/conf.d
+      - /Users/zouyl/env/volumes/nginx/log:/var/log/nginx
+      - /Users/zouyl/env/volumes/nginx/html:/usr/share/nginx/html
+    networks:
+      - app-network
+
+  mysql:
+    image: mysql:latest
+    environment:
+      MYSQL_ROOT_PASSWORD: 123456
+    ports:
+      - 3306:3306
+    volumes:
+      - /Users/zouyl/env/volumes/mysql/data:/var/lib/mysql
+      - /Users/zouyl/env/volumes/mysql/my.cnf:/etc/mysql/conf.d/my.cnf
+      - /Users/zouyl/env/volumes/mysql/log:/var/log/mysql
+
+networks:
+  app-network:
+    driver: bridge

@@ -1,15 +1,105 @@
-# What is this?
+# docker 开发者环境
 
-The github.dev web-based editor is a lightweight editing experience that runs entirely in your browser. You can navigate files and source code repositories from GitHub, and make and commit code changes.
+## 统一网络
 
-There are two ways to go directly to a VS Code environment in your browser and start coding:
+- 所有服务都在同一个网络中，方便服务之间的通信。
 
-* Press the . key on any repository or pull request.
-* Swap `.com` with `.dev` in the URL. For example, this repo https://github.com/github/dev becomes http://github.dev/github/dev
+- docker-compose 参考配置：
 
-Preview the gif below to get a quick demo of github.dev in action.
+```yaml
+networks:
+  app-network:
+    driver: bridge
+```
 
-![github dev](https://user-images.githubusercontent.com/856858/130119109-4769f2d7-9027-4bc4-a38c-10f297499e8f.gif)
+## nginx
 
-# Why?
-It’s a quick way to edit and navigate code. It's especially useful if you want to edit multiple files at a time or take advantage of all the powerful code editing features of Visual Studio Code when making a quick change. For more information, see our [documentation](https://github.co/codespaces-editor-help).
+- nginx 服务用于反向代理，将请求转发到不同的服务。
+- 在挂载卷中配置`/Users/zouyl/env/volumes/nginx/nginx.conf`
+
+```bash
+
+user nginx;
+worker_processes auto;
+
+error_log /var/log/nginx/error.log notice;
+pid /run/nginx.pid;
+
+
+events {
+    worker_connections 1024;
+}
+
+
+http {
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+
+    log_format main '$remote_addr - $remote_user [$time_local] "$request" '
+    '$status $body_bytes_sent "$http_referer" '
+    '"$http_user_agent" "$http_x_forwarded_for"';
+
+    access_log /var/log/nginx/access.log main;
+
+    sendfile on;
+    #tcp_nopush     on;
+
+    keepalive_timeout 65;
+
+    #gzip  on;
+
+    include /etc/nginx/conf.d/*.conf;
+}
+
+```
+
+- docker-compose 参考配置
+
+```yaml
+nginx:
+  image: nginx:latest
+  # 开机启动
+  restart: always
+  ports:
+    - 80:80
+    - 443:443
+  volumes:
+    - /Users/zouyl/env/volumes/nginx/nginx.conf:/etc/nginx/nginx.conf
+    - /Users/zouyl/env/volumes/nginx/conf.d:/etc/nginx/conf.d
+    - /Users/zouyl/env/volumes/nginx/log:/var/log/nginx
+    - /Users/zouyl/env/volumes/nginx/html:/usr/share/nginx/html
+  networks:
+    - app-network
+```
+
+## mysql
+
+- mysql 服务用于数据库存储。
+- 在挂载卷中配置`/Users/zouyl/env/volumes/mysql/my.cnf`
+
+```bash
+[mysqld]
+datadir=/var/lib/mysql
+socket=/var/run/mysqld/mysqld.sock
+secure-file-priv=/var/lib/mysql-files
+pid-file=/var/run/mysqld/mysqld.pid
+```
+
+- docker-compose 参考配置
+
+```yaml
+mysql:
+  image: mysql:latest
+  # 开机启动
+  restart: always
+  environment:
+    MYSQL_ROOT_PASSWORD: 123456
+  ports:
+    - 3306:3306
+  volumes:
+    - /Users/zouyl/env/volumes/mysql/data:/var/lib/mysql
+    - /Users/zouyl/env/volumes/mysql/my.cnf:/etc/mysql/conf.d/my.cnf
+    - /Users/zouyl/env/volumes/mysql/log:/var/log/mysql
+  networks:
+    - app-network
+```
