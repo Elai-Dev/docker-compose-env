@@ -66,7 +66,7 @@ nginx:
   volumes:
     - /Users/zouyl/env/volumes/nginx/nginx.conf:/etc/nginx/nginx.conf
     - /Users/zouyl/env/volumes/nginx/conf.d:/etc/nginx/conf.d
-    - /Users/zouyl/env/volumes/nginx/log:/var/log/nginx
+    - /Users/zouyl/env/volumes/nginx/logs:/var/log/nginx
     - /Users/zouyl/env/volumes/nginx/html:/usr/share/nginx/html
   networks:
     - app-network
@@ -99,7 +99,7 @@ mysql:
   volumes:
     - /Users/zouyl/env/volumes/mysql/data:/var/lib/mysql
     - /Users/zouyl/env/volumes/mysql/my.cnf:/etc/mysql/conf.d/my.cnf
-    - /Users/zouyl/env/volumes/mysql/log:/var/log/mysql
+    - /Users/zouyl/env/volumes/mysql/logs:/var/log/mysql
   networks:
     - app-network
 ```
