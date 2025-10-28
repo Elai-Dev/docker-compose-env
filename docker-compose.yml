@@ -11,8 +11,6 @@ services:
       - ${pwd}/volumes/nginx/conf.d:/etc/nginx/conf.d
       - ${pwd}/volumes/nginx/logs:/var/log/nginx
       - ${pwd}/volumes/nginx/html:/usr/share/nginx/html
-    networks:
-      - app-network
 
   redis:
     image: redis:latest
@@ -36,7 +34,7 @@ services:
       - ${pwd}/volumes/mysql/logs:/var/log/mysql
 
   php:
-    container_name: php
+    container_name: docker-compose-env-php-1
     build:
       context: ./php
       dockerfile: Dockerfile
@@ -45,34 +43,37 @@ services:
       - 9000:9000
     volumes:
       - ${pwd}/volumes/php:/var/www/html
-    networks:
-      - app-network
 
   kafka:
-    image: apache/kafka:latest
+    image: confluentinc/cp-kafka:latest
     restart: always
     ports:
-      - 9092:9092 # 客户端访问端口
-      - 9093:9093 # 控制器内部通信端口
+      - 9092:9092 # 客户端访问端口（宿主机映射）
+      - 9093:9093 # 控制器内部通信端口（可选暴露）
     volumes:
       - ${pwd}/volumes/kafka/data:/tmp/kafka-logs
     environment:
-      # 节点 ID，唯一标识每个 Kafka 节点
+      # 节点ID
       KAFKA_NODE_ID: 1
-      # 同时作为 broker 和 controller
+      # 单机角色：同时作为 controller 和 broker
       KAFKA_PROCESS_ROLES: broker,controller
-      # 监听端口，PLAINTEXT 用于客户端通信，CONTROLLER 用于控制器内部通信
-      KAFKA_LISTENERS: PLAINTEXT://localhost:9092,CONTROLLER://localhost:9093
-      # 外部访问地址（修改为服务器 IP 供远程访问）
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
-      # 控制器通信监听器名称
-      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-      # 监听器安全协议映射，CONTROLLER 使用 PLAINTEXT，PLAINTEXT 也使用 PLAINTEXT
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
-      # 控制器集群（单节点即自身）
+      # 控制器集群配置（单机仅需自身节点）
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
-    networks:
-      - app-network
+      # 监听协议映射（区分控制器、内部、外部访问）
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      # 监听地址配置：
+      # - CONTROLLER：控制器内部通信
+      # - INTERNAL：容器内内部通信（如自身 broker 与 controller 交互）
+      # - EXTERNAL：宿主机/外部客户端访问
+      KAFKA_LISTENERS: CONTROLLER://0.0.0.0:9093,INTERNAL://0.0.0.0:29092,EXTERNAL://0.0.0.0:9092
+      # 对外暴露的地址（宿主机用 localhost，外部机器需改宿主机 IP）
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://localhost:29092,EXTERNAL://localhost:9092
+      # 控制器监听名称（指定使用 CONTROLLER 协议）
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      # 关键：指定 broker 内部通信使用的监听器（必须是 advertised.listeners 中已有的名称）
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      # 增加 JVM 日志输出，便于排查初始化错误
+      KAFKA_LOG4J_LOGGERS: "org.apache.kafka.server.log.LogManager=DEBUG"
 networks:
   app-network:
     driver: bridge
