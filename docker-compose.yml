@@ -7,10 +7,10 @@ services:
       - 80:80
       - 443:443
     volumes:
-      - /Users/zouyl/env/docker-compose-env/volumes/nginx/nginx.conf:/etc/nginx/nginx.conf
-      - /Users/zouyl/env/docker-compose-env/volumes/nginx/conf.d:/etc/nginx/conf.d
-      - /Users/zouyl/env/docker-compose-env/volumes/nginx/logs:/var/log/nginx
-      - /Users/zouyl/env/docker-compose-env/volumes/nginx/html:/usr/share/nginx/html
+      - ${pwd}/volumes/nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ${pwd}/volumes/nginx/conf.d:/etc/nginx/conf.d
+      - ${pwd}/volumes/nginx/logs:/var/log/nginx
+      - ${pwd}/volumes/nginx/html:/usr/share/nginx/html
     networks:
       - app-network
 
@@ -20,8 +20,8 @@ services:
     ports:
       - 6379:6379
     volumes:
-      - /Users/zouyl/env/docker-compose-env/volumes/redis/data:/data
-      - /Users/zouyl/env/docker-compose-env/volumes/redis/redis.conf:/usr/local/etc/redis/redis.conf
+      - ${pwd}/volumes/redis/data:/data
+      - ${pwd}/volumes/redis/redis.conf:/usr/local/etc/redis/redis.conf
 
   mysql:
     image: mysql:latest
@@ -31,9 +31,9 @@ services:
     ports:
       - 3306:3306
     volumes:
-      - /Users/zouyl/env/docker-compose-env/volumes/mysql/data:/var/lib/mysql
-      - /Users/zouyl/env/docker-compose-env/volumes/mysql/my.cnf:/etc/mysql/conf.d/my.cnf
-      - /Users/zouyl/env/docker-compose-env/volumes/mysql/logs:/var/log/mysql
+      - ${pwd}/volumes/mysql/data:/var/lib/mysql
+      - ${pwd}/volumes/mysql/my.cnf:/etc/mysql/conf.d/my.cnf
+      - ${pwd}/volumes/mysql/logs:/var/log/mysql
 
   php:
     container_name: php
@@ -44,7 +44,33 @@ services:
     ports:
       - 9000:9000
     volumes:
-      - /Users/zouyl/env/docker-compose-env/volumes/php:/var/www/html
+      - ${pwd}/volumes/php:/var/www/html
+    networks:
+      - app-network
+
+  kafka:
+    image: apache/kafka:latest
+    restart: always
+    ports:
+      - 9092:9092 # 客户端访问端口
+      - 9093:9093 # 控制器内部通信端口
+    volumes:
+      - ${pwd}/volumes/kafka/data:/tmp/kafka-logs
+    environment:
+      # 节点 ID，唯一标识每个 Kafka 节点
+      KAFKA_NODE_ID: 1
+      # 同时作为 broker 和 controller
+      KAFKA_PROCESS_ROLES: broker,controller
+      # 监听端口，PLAINTEXT 用于客户端通信，CONTROLLER 用于控制器内部通信
+      KAFKA_LISTENERS: PLAINTEXT://localhost:9092,CONTROLLER://localhost:9093
+      # 外部访问地址（修改为服务器 IP 供远程访问）
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      # 控制器通信监听器名称
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      # 监听器安全协议映射，CONTROLLER 使用 PLAINTEXT，PLAINTEXT 也使用 PLAINTEXT
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      # 控制器集群（单节点即自身）
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
     networks:
       - app-network
 networks:
